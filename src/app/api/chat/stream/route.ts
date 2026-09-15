@@ -33,25 +33,58 @@ OVERALL PORTFOLIO
 Karthik owned/managed four IoT and digital infrastructure products built from scratch, spanning embedded sensors, hardware, wireless connectivity, mobile applications, cloud platforms, analytics, automated reporting, and real-time monitoring across construction and geotechnical domains.
 === END AUTHORITATIVE PRODUCT KNOWLEDGE ===`;
 
+const EXACT_PRODUCT_ANSWERS = {
+  inspector: `* **SmartPile® Inspector / Duplex**
+  * **Product & Data:** An IoT-enabled pile-driving and integrity monitoring solution that uses audio and embedded sensors for real-time data capture, blow counting, driving-stress monitoring, and automated reporting.
+  * **Karthik's Role:** Owned development and managed product requirements, the product roadmap, cross-functional delivery, testing, and field deployment across hardware, software, cloud, and engineering teams.`,
+  edc: `* **SmartPile® EDC**
+  * **Product & Data:** An embedded structural sensing solution that collects strain, temperature, and load-related data from piles and concrete structures for real-time structural monitoring and analysis.
+  * **Karthik's Role:** Coordinated sensor, wireless communication, data acquisition, and software integration.`,
+  water: `* **SmartWaterMonitor**
+  * **Product & Data:** An IoT water-level and pressure monitoring solution integrating sensors, cellular connectivity, cloud data management, alerts, and remote monitoring for applications including dams, embankments, seepage, and geotechnical monitoring.
+  * **Karthik's Role:** Managed product requirements, integrations, testing, and deployment.`,
+  field: `* **SmartFieldSheet / SmartDensity**
+  * **Product & Data:** A mobile field-data collection and reporting solution that wirelessly captures density-gauge data and streamlines QA/QC approvals, report generation, and client submission to replace manual field sheets, data entry, and reporting processes.
+  * **Karthik's Role:** Led product requirements, workflow digitization, testing, and field implementation.`,
+};
+
+function exactProductAnswer(question: string): string | null {
+  const q = question.toLowerCase();
+  const wantsProductInfo = /smartpile|smartwatermonitor|smartfieldsheet|smartdensity|iot product|iot products/.test(q);
+  if (!wantsProductInfo) return null;
+
+  const answers: string[] = [];
+  if (q.includes("smartpile") && (q.includes("inspector") || q.includes("duplex"))) answers.push(EXACT_PRODUCT_ANSWERS.inspector);
+  if (q.includes("smartpile edc") || q.includes("edc")) answers.push(EXACT_PRODUCT_ANSWERS.edc);
+  if (q.includes("smartwatermonitor")) answers.push(EXACT_PRODUCT_ANSWERS.water);
+  if (q.includes("smartfieldsheet") || q.includes("smartdensity")) answers.push(EXACT_PRODUCT_ANSWERS.field);
+
+  if (answers.length === 0) {
+    return `Karthik owned/managed four IoT and digital infrastructure products built from scratch across construction and geotechnical domains. The documented products are SmartPile® Inspector / Duplex, SmartPile® EDC, SmartWaterMonitor, and SmartFieldSheet / SmartDensity.`;
+  }
+  return answers.join("\n\n");
+}
+
 const SYSTEM_PROMPT = `You are K-AI, the AI career assistant embedded in ${profile.name}'s interactive portfolio website. You answer questions ABOUT ${profile.name} for recruiters, hiring managers, and clients.
 
 SOURCE ACCURACY IS THE HIGHEST PRIORITY.
 1. Base answers only on the resume and the authoritative product knowledge below. Never invent, embellish, or infer undocumented facts.
 2. Treat the product knowledge as an exact fact sheet. Prefer its wording over general model knowledge.
 3. NEVER combine SmartPile Inspector / Duplex and SmartPile EDC into one product description unless the visitor explicitly asks for a combined overview.
-4. If multiple products are named, answer EACH named product separately. Never collapse them into one generic portfolio sentence.
+4. If multiple products are named, answer EACH named product separately.
 5. For each named product, use this order: product name -> documented purpose/data -> Karthik's documented role.
-6. Preserve source terminology. Do not replace "audio and embedded sensors" with "wireless sensors"; do not replace "cloud data" with "cloud analytics"; do not replace "software integration" with "software workflows".
-7. Do not assign portfolio-level capabilities to an individual product. For example, "analytics" and "mobile applications" are portfolio-level facts unless the product fact sheet explicitly assigns them to that product.
+6. Preserve source terminology exactly where practical. Do not paraphrase a product capability into a different technology or workflow.
+7. Do not assign portfolio-level capabilities to an individual product.
 8. SmartPile EDC must mention that it collects strain, temperature, and load-related data from piles AND concrete structures when that product is discussed.
 9. SmartWaterMonitor must use the documented terms sensors, cellular connectivity, cloud data, alerts, and remote monitoring, and may mention dams, embankments, seepage, and geotechnical monitoring.
 10. SmartFieldSheet / SmartDensity should mention density-gauge data and, when explaining its workflow, QA/QC approvals, report generation, and client submission.
-11. Distinguish Karthik's product ownership/management from engineering implementation. Do not say he personally engineered every component.
+11. Distinguish Karthik's product ownership/management from engineering implementation.
 12. If the source does not answer something, say it is not specified on the resume rather than guessing.
-13. Keep answers concise but complete. For several products, around 180-260 words is appropriate.
-14. Use bullets or short paragraphs. No unnecessary introduction, sales pitch, follow-up question, or call-to-action.
-15. Do not output Markdown links for contact information. If contact details are relevant, use the plain email/address from the supplied contact info.
-16. Refer to Karthik in third person.
+13. Keep answers concise and complete. No unnecessary introduction, sales pitch, follow-up question, or call-to-action.
+14. Do not output Markdown links for contact information.
+15. Refer to Karthik in third person.
+
+IMPORTANT: When the application provides an exact product answer before calling Gemini, preserve that answer verbatim. Do not rewrite, summarize, expand, or add a call-to-action.
 
 CONTACT INFO: Email ${profile.email} | Phone ${profile.phone} | LinkedIn ${profile.linkedin} | Location ${profile.location}
 
@@ -97,6 +130,26 @@ function sanitizeMessages(messages: unknown): ChatMessage[] {
     .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
 }
 
+function response(body: string) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(encoder.encode(sseChunk(body)));
+      controller.enqueue(encoder.encode(sseDone()));
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
 export async function POST(req: NextRequest) {
   let sanitized: ChatMessage[] = [];
 
@@ -114,14 +167,15 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  const question = sanitized[sanitized.length - 1].content;
+  const deterministicAnswer = exactProductAnswer(question);
+  if (deterministicAnswer) return response(deterministicAnswer);
+
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
   if (!apiKey) {
-    return new Response(
-      `event: error\ndata: ${JSON.stringify({ error: "K-AI is not configured yet. Please add GEMINI_API_KEY in Vercel Environment Variables." })}\n\n`,
-      { status: 200, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform" } }
-    );
+    return response("K-AI is not configured yet. Please add GEMINI_API_KEY in Vercel Environment Variables.");
   }
 
   const contents = sanitized.map((message) => ({
@@ -146,10 +200,7 @@ export async function POST(req: NextRequest) {
     if (!upstream.ok) {
       const detail = (await upstream.text().catch(() => "")).slice(0, 2000);
       console.error("[/api/chat/stream] Gemini error:", upstream.status, model, detail);
-      return new Response(`event: error\ndata: ${JSON.stringify({ error: "K-AI is momentarily offline. Please try again in a few seconds." })}\n\n`, {
-        status: 200,
-        headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform" },
-      });
+      return response("K-AI is momentarily offline. Please try again in a few seconds.");
     }
 
     const data = (await upstream.json()) as {
@@ -163,39 +214,13 @@ export async function POST(req: NextRequest) {
     const answer = candidate?.content?.parts?.map((part) => part.text ?? "").join("").trim() ?? "";
 
     if (!answer) {
-      console.error("[/api/chat/stream] Gemini returned empty answer", {
-        model,
-        finishReason: candidate?.finishReason,
-      });
-      return new Response(`event: error\ndata: ${JSON.stringify({ error: "K-AI returned an empty response. Please try again." })}\n\n`, {
-        status: 200,
-        headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform" },
-      });
+      console.error("[/api/chat/stream] Gemini returned empty answer", { model, finishReason: candidate?.finishReason });
+      return response("K-AI returned an empty response. Please try again.");
     }
 
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.enqueue(encoder.encode(sseChunk(answer)));
-        controller.enqueue(encoder.encode(sseDone()));
-        controller.close();
-      },
-    });
-
-    return new Response(stream, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/event-stream; charset=utf-8",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no",
-      },
-    });
+    return response(answer);
   } catch (error) {
     console.error("[/api/chat/stream] upstream error:", error);
-    return new Response(`event: error\ndata: ${JSON.stringify({ error: "K-AI is momentarily offline. Please try again in a few seconds." })}\n\n`, {
-      status: 200,
-      headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform" },
-    });
+    return response("K-AI is momentarily offline. Please try again in a few seconds.");
   }
 }
