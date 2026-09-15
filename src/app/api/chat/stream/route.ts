@@ -6,7 +6,7 @@ export const maxDuration = 60;
 
 const PRODUCT_KNOWLEDGE = `
 === KARTHIK'S IoT & DIGITAL INFRASTRUCTURE PRODUCTS ===
-These are authoritative resume-backed facts. When a visitor asks about any of these products, answer specifically from this section.
+These are authoritative resume-backed facts. When a visitor asks about these products, answer specifically and completely.
 
 SmartPile® Inspector / Duplex: Karthik owned development of an IoT-enabled pile-driving and integrity monitoring solution using audio and embedded sensors for real-time data capture, blow counting, driving-stress monitoring, and automated reporting. He managed product requirements, roadmap, cross-functional delivery, testing, and field deployment across hardware, software, cloud, and engineering teams.
 
@@ -23,13 +23,13 @@ const SYSTEM_PROMPT = `You are "K-AI", the AI career assistant embedded in ${pro
 
 STRICT RULES:
 1. Base answers ONLY on the resume and dedicated product knowledge below. Never invent experience, companies, dates, capabilities, technologies, or numbers.
-2. The dedicated IoT Product Knowledge is authoritative for SmartPile, SmartPile Inspector / Duplex, SmartPile EDC, SmartWaterMonitor, SmartFieldSheet, and SmartDensity. If the visitor names multiple products, cover EACH named product rather than collapsing the answer into a generic statement.
-3. For product questions, start with the product name and explain what the product does, then briefly state Karthik's ownership/management role. Clearly distinguish his role from the engineering implementation.
-4. If asked about something not covered, say honestly that it is not on the resume and suggest contacting Karthik at ${profile.email} or ${profile.phone}.
-5. Keep answers concise and scannable: bullets or short paragraphs, normally under 180 words unless the visitor asks for depth.
-6. Use a warm, professional, confident tone and refer to Karthik in third person.
-7. Do not use headers. Light markdown is allowed.
-8. For unrelated questions, politely steer back to Karthik's career profile.
+2. The dedicated IoT Product Knowledge is authoritative for SmartPile, SmartPile Inspector / Duplex, SmartPile EDC, SmartWaterMonitor, SmartFieldSheet, and SmartDensity.
+3. If the visitor names multiple products, cover EVERY named product. Never collapse multiple named products into one generic portfolio sentence.
+4. For each product, state: product name -> what it does -> Karthik's ownership/management role. Clearly distinguish his product role from the underlying engineering implementation.
+5. Keep answers concise but complete, normally under 220 words. Do not stop after the first product.
+6. Use bullets or short paragraphs. Do not use headers.
+7. If something is not covered, say it is not on the resume instead of guessing.
+8. Refer to Karthik in third person and use a professional, confident tone.
 
 CONTACT INFO: Email ${profile.email} | Phone ${profile.phone} | LinkedIn ${profile.linkedin} | Location ${profile.location}
 
@@ -44,7 +44,7 @@ interface ChatMessage {
   content: string;
 }
 
-function openAIChunk(content: string) {
+function sseChunk(content: string) {
   return `data: ${JSON.stringify({
     id: "gemini-stream",
     object: "chat.completion.chunk",
@@ -52,7 +52,7 @@ function openAIChunk(content: string) {
   })}\n\n`;
 }
 
-function doneChunk() {
+function sseDone() {
   return `data: ${JSON.stringify({
     id: "gemini-stream",
     object: "chat.completion.chunk",
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const messages: ChatMessage[] = Array.isArray(body?.messages) ? body.messages : [];
     sanitized = messages
-      .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim().length > 0)
+      .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
       .slice(-12)
       .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
   } catch {
@@ -83,12 +83,11 @@ export async function POST(req: NextRequest) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
-
   if (!apiKey) {
-    return new Response(
-      `event: error\ndata: ${JSON.stringify({ error: "K-AI is not configured yet. Please add GEMINI_API_KEY in Vercel Environment Variables." })}\n\n`,
-      { status: 200, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" } }
-    );
+    return new Response(`event: error\ndata: ${JSON.stringify({ error: "K-AI is not configured yet. Please add GEMINI_API_KEY in Vercel Environment Variables." })}\n\n`, {
+      status: 200,
+      headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform" },
+    });
   }
 
   const contents = sanitized.map((message) => ({
@@ -96,71 +95,54 @@ export async function POST(req: NextRequest) {
     parts: [{ text: message.content }],
   }));
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 55000);
-
   try {
+    // Deliberately use Gemini's complete-response API here. The browser still
+    // receives SSE, but we no longer depend on Gemini's upstream SSE framing.
+    // This prevents partial answers caused by chunk/event parsing or proxy buffering.
     const upstream = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
           contents,
-          generationConfig: { temperature: 0.25, maxOutputTokens: 700 },
+          generationConfig: { temperature: 0.2, maxOutputTokens: 1200 },
         }),
-        signal: controller.signal,
       }
     );
 
-    if (!upstream.ok || !upstream.body) {
-      const detail = await upstream.text().catch(() => "");
-      console.error("[/api/chat/stream] Gemini error:", upstream.status, detail);
-      throw new Error("Gemini request failed");
+    if (!upstream.ok) {
+      const detail = (await upstream.text().catch(() => "")).slice(0, 2000);
+      console.error("[/api/chat/stream] Gemini error:", upstream.status, model, detail);
+      return new Response(`event: error\ndata: ${JSON.stringify({ error: "K-AI is momentarily offline. Please try again in a few seconds." })}\n\n`, {
+        status: 200,
+        headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform" },
+      });
     }
 
-    const reader = upstream.body.getReader();
-    const decoder = new TextDecoder();
-    const encoder = new TextEncoder();
+    const data = (await upstream.json()) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+        finishReason?: string;
+      }>;
+    };
+    const answer = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim() ?? "";
 
+    if (!answer) {
+      console.error("[/api/chat/stream] Gemini returned empty answer", { model, finishReason: data.candidates?.[0]?.finishReason });
+      return new Response(`event: error\ndata: ${JSON.stringify({ error: "K-AI returned an empty response. Please try again." })}\n\n`, {
+        status: 200,
+        headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform" },
+      });
+    }
+
+    const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
-      async start(streamController) {
-        let buffer = "";
-        try {
-          for (;;) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const events = buffer.split("\n");
-            buffer = events.pop() ?? "";
-            for (const line of events) {
-              const trimmed = line.trim();
-              if (!trimmed.startsWith("data:")) continue;
-              const payload = trimmed.slice(5).trim();
-              if (!payload) continue;
-              try {
-                const parsed = JSON.parse(payload) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-                const text = parsed.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
-                if (text) streamController.enqueue(encoder.encode(openAIChunk(text)));
-              } catch {
-                // Ignore malformed SSE lines.
-              }
-            }
-          }
-          streamController.enqueue(encoder.encode(doneChunk()));
-          streamController.close();
-        } catch (error) {
-          console.error("[/api/chat/stream] Gemini stream error:", error);
-          streamController.enqueue(encoder.encode(`event: error\ndata: ${JSON.stringify({ error: "K-AI is momentarily offline. Please try again in a few seconds." })}\n\n`));
-          streamController.close();
-        } finally {
-          clearTimeout(timeout);
-        }
-      },
-      cancel() {
-        clearTimeout(timeout);
-        reader.cancel().catch(() => undefined);
+      start(controller) {
+        controller.enqueue(encoder.encode(sseChunk(answer)));
+        controller.enqueue(encoder.encode(sseDone()));
+        controller.close();
       },
     });
 
@@ -174,11 +156,10 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    clearTimeout(timeout);
     console.error("[/api/chat/stream] upstream error:", error);
     return new Response(`event: error\ndata: ${JSON.stringify({ error: "K-AI is momentarily offline. Please try again in a few seconds." })}\n\n`, {
       status: 200,
-      headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" },
+      headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform" },
     });
   }
 }
