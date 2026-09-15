@@ -5,31 +5,49 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const PRODUCT_KNOWLEDGE = `
-=== KARTHIK'S IoT & DIGITAL INFRASTRUCTURE PRODUCTS ===
-These are authoritative resume-backed facts. When a visitor asks about these products, answer specifically and completely.
+=== AUTHORITATIVE KARTHIK IoT PRODUCT KNOWLEDGE ===
+Use ONLY these resume-backed facts for product questions. Do not add capabilities, technologies, integrations, or outcomes that are not stated here.
 
-SmartPile® Inspector / Duplex: Karthik owned development of an IoT-enabled pile-driving and integrity monitoring solution using audio and embedded sensors for real-time data capture, blow counting, driving-stress monitoring, and automated reporting. He managed product requirements, roadmap, cross-functional delivery, testing, and field deployment across hardware, software, cloud, and engineering teams.
+SMARTPILE® INSPECTOR / DUPLEX
+- Product: IoT-enabled pile-driving and integrity monitoring solution.
+- Technology/data: audio and embedded sensors for real-time data capture, blow counting, driving-stress monitoring, and automated reporting.
+- Karthik's role: owned development; managed product requirements, roadmap, cross-functional delivery, testing, and field deployment across hardware, software, cloud, and engineering teams.
 
-SmartPile® EDC: Karthik managed an embedded structural sensing solution collecting strain, temperature, and load-related data from piles and concrete structures. He coordinated sensor, wireless communication, data acquisition, and software integration for real-time structural monitoring and analysis.
+SMARTPILE® EDC
+- Product: embedded structural sensing solution.
+- Data: strain, temperature, and load-related data from piles and concrete structures.
+- Karthik's role: coordinated sensor, wireless communication, data acquisition, and software integration for real-time structural monitoring and analysis.
 
-SmartWaterMonitor: Karthik owned an IoT-based water-level and pressure monitoring solution integrating sensors, cellular connectivity, cloud data management, alerts, and remote monitoring. He managed product requirements, integrations, testing, and deployment for dams, embankments, seepage, and geotechnical monitoring applications.
+SMARTWATERMONITOR
+- Product: IoT water-level and pressure monitoring solution.
+- Technology/data: sensors, cellular connectivity, cloud data, alerts, and remote monitoring.
+- Applications: dams, embankments, seepage, and geotechnical monitoring.
+- Karthik's role: managed product requirements, integrations, testing, and deployment.
 
-SmartFieldSheet / SmartDensity: Karthik managed a mobile field-data collection and reporting solution that wirelessly captured density-gauge data and streamlined QA/QC approvals, report generation, and client submission. He led product requirements, workflow digitization, testing, and field implementation to replace manual field sheets, data entry, and reporting processes.
+SMARTFIELDSHEET / SMARTDENSITY
+- Product: mobile field-data collection and reporting solution.
+- Data/workflow: wirelessly captured density-gauge data; streamlined QA/QC approvals, report generation, and client submission.
+- Karthik's role: led product requirements, workflow digitization, testing, and field implementation to replace manual field sheets, data entry, and reporting.
 
-Overall IoT portfolio: Karthik owned/managed four IoT and digital infrastructure products built from scratch, spanning embedded sensors, hardware, wireless connectivity, mobile applications, cloud platforms, analytics, automated reporting, and real-time monitoring across construction and geotechnical domains.
-=== END IoT PRODUCT KNOWLEDGE ===`;
+OVERALL PORTFOLIO
+Karthik owned/managed four IoT and digital infrastructure products built from scratch, spanning embedded sensors, hardware, wireless connectivity, mobile applications, cloud platforms, analytics, automated reporting, and real-time monitoring across construction and geotechnical domains.
+=== END AUTHORITATIVE PRODUCT KNOWLEDGE ===`;
 
-const SYSTEM_PROMPT = `You are "K-AI", the AI career assistant embedded in ${profile.name}'s interactive portfolio website. You answer questions ABOUT ${profile.name} (Karthik) for recruiters, hiring managers, and clients.
+const SYSTEM_PROMPT = `You are K-AI, the AI career assistant embedded in ${profile.name}'s interactive portfolio website. You answer questions ABOUT ${profile.name} for recruiters, hiring managers, and clients.
 
-STRICT RULES:
-1. Base answers ONLY on the resume and dedicated product knowledge below. Never invent experience, companies, dates, capabilities, technologies, or numbers.
-2. The dedicated IoT Product Knowledge is authoritative for SmartPile, SmartPile Inspector / Duplex, SmartPile EDC, SmartWaterMonitor, SmartFieldSheet, and SmartDensity.
-3. If the visitor names multiple products, cover EVERY named product. Never collapse multiple named products into one generic portfolio sentence.
-4. For each product, state: product name -> what it does -> Karthik's ownership/management role. Clearly distinguish his product role from the underlying engineering implementation.
-5. Keep answers concise but complete, normally under 220 words. Do not stop after the first product.
-6. Use bullets or short paragraphs. Do not use headers.
-7. If something is not covered, say it is not on the resume instead of guessing.
-8. Refer to Karthik in third person and use a professional, confident tone.
+SOURCE ACCURACY IS THE HIGHEST PRIORITY.
+1. Base answers only on the resume and the authoritative product knowledge below. Never invent or embellish.
+2. Treat the product knowledge as a fact sheet, not as an invitation to infer additional product capabilities.
+3. NEVER combine SmartPile Inspector / Duplex and SmartPile EDC into one product description unless the visitor explicitly asks for a combined overview.
+4. If multiple products are named, answer EACH named product separately. Never collapse them into a generic portfolio sentence.
+5. For each product use this order: product name -> what it does / data it captures -> Karthik's documented role.
+6. Preserve source terminology such as "audio and embedded sensors", "driving-stress", "strain, temperature, and load-related data", "cellular connectivity", and "density-gauge data". Do not substitute stronger or different claims.
+7. Do not claim "wireless sensors", "cloud analytics", "AI", "automation", "analytics", or any other capability for an individual product unless that exact capability is explicitly supported by the product fact sheet.
+8. Distinguish Karthik's product ownership/management from engineering implementation. Do not say he personally engineered every component.
+9. If the source does not answer something, say it is not specified on the resume rather than guessing.
+10. Keep normal answers concise and complete, around 180-260 words when several products are requested. Completeness is more important than an artificial short limit.
+11. Use bullets or short paragraphs. No unnecessary introduction.
+12. Refer to Karthik in third person.
 
 CONTACT INFO: Email ${profile.email} | Phone ${profile.phone} | LinkedIn ${profile.linkedin} | Location ${profile.location}
 
@@ -60,18 +78,29 @@ function sseDone() {
   })}\n\ndata: [DONE]\n\n`;
 }
 
+function sanitizeMessages(messages: unknown): ChatMessage[] {
+  if (!Array.isArray(messages)) return [];
+  return messages
+    .filter(
+      (m): m is ChatMessage =>
+        !!m &&
+        typeof m === "object" &&
+        ((m as ChatMessage).role === "user" || (m as ChatMessage).role === "assistant") &&
+        typeof (m as ChatMessage).content === "string" &&
+        (m as ChatMessage).content.trim().length > 0
+    )
+    .slice(-12)
+    .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
+}
+
 export async function POST(req: NextRequest) {
-  let sanitized: ChatMessage[];
+  let sanitized: ChatMessage[] = [];
 
   try {
     const body = await req.json();
-    const messages: ChatMessage[] = Array.isArray(body?.messages) ? body.messages : [];
-    sanitized = messages
-      .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
-      .slice(-12)
-      .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
+    sanitized = sanitizeMessages(body?.messages);
   } catch {
-    sanitized = [];
+    // handled below
   }
 
   if (sanitized.length === 0 || sanitized[sanitized.length - 1].role !== "user") {
@@ -83,11 +112,12 @@ export async function POST(req: NextRequest) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+
   if (!apiKey) {
-    return new Response(`event: error\ndata: ${JSON.stringify({ error: "K-AI is not configured yet. Please add GEMINI_API_KEY in Vercel Environment Variables." })}\n\n`, {
-      status: 200,
-      headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform" },
-    });
+    return new Response(
+      `event: error\ndata: ${JSON.stringify({ error: "K-AI is not configured yet. Please add GEMINI_API_KEY in Vercel Environment Variables." })}\n\n`,
+      { status: 200, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform" } }
+    );
   }
 
   const contents = sanitized.map((message) => ({
@@ -96,9 +126,8 @@ export async function POST(req: NextRequest) {
   }));
 
   try {
-    // Deliberately use Gemini's complete-response API here. The browser still
-    // receives SSE, but we no longer depend on Gemini's upstream SSE framing.
-    // This prevents partial answers caused by chunk/event parsing or proxy buffering.
+    // Use Gemini's complete-response API and then adapt the result to the
+    // existing browser SSE contract. This avoids partial upstream SSE parsing.
     const upstream = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
       {
@@ -107,7 +136,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
           contents,
-          generationConfig: { temperature: 0.2, maxOutputTokens: 1200 },
+          generationConfig: { temperature: 0.15, maxOutputTokens: 1400 },
         }),
       }
     );
@@ -127,10 +156,15 @@ export async function POST(req: NextRequest) {
         finishReason?: string;
       }>;
     };
-    const answer = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim() ?? "";
+
+    const candidate = data.candidates?.[0];
+    const answer = candidate?.content?.parts?.map((part) => part.text ?? "").join("").trim() ?? "";
 
     if (!answer) {
-      console.error("[/api/chat/stream] Gemini returned empty answer", { model, finishReason: data.candidates?.[0]?.finishReason });
+      console.error("[/api/chat/stream] Gemini returned empty answer", {
+        model,
+        finishReason: candidate?.finishReason,
+      });
       return new Response(`event: error\ndata: ${JSON.stringify({ error: "K-AI returned an empty response. Please try again." })}\n\n`, {
         status: 200,
         headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform" },
