@@ -27,7 +27,7 @@ export function FeaturedVideo() {
             </div>
             <iframe
               className="absolute inset-0 h-full w-full"
-              src="https://www.youtube.com/embed/caHCtlbXgbg?si=4pReVAUU0qohBlDH&start=1"
+              src="https://www.youtube.com/embed/caHCtlbXgbg?si=KslvfgLsE0-8RrHj&cc_load_policy=0"
               title="Featured video"
               loading="lazy"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
