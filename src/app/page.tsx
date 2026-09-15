@@ -12,6 +12,7 @@ import { Experience } from "@/components/portfolio/experience";
 import { Projects } from "@/components/portfolio/projects";
 import { Products } from "@/components/portfolio/products";
 import { Highlights } from "@/components/portfolio/highlights";
+import { FeaturedVideo } from "@/components/portfolio/featured-video";
 import { AiExperience } from "@/components/portfolio/ai-experience";
 import { Toolkit } from "@/components/portfolio/toolkit";
 import { Contact } from "@/components/portfolio/contact";
@@ -116,6 +117,7 @@ export default function Home() {
           <Divider />
           <Products />
           <Highlights />
+          <FeaturedVideo />
           <AiExperience />
           <Toolkit />
           <Divider />
