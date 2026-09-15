@@ -76,8 +76,8 @@ export function Navbar({
         className="mx-auto flex h-16 md:h-[72px] max-w-7xl items-center justify-between gap-2 px-4 sm:px-6 lg:px-8"
       >
         <a href="#top" className="group flex shrink-0 items-center gap-3" aria-label="Back to top">
-          <span className="relative grid h-10 w-10 place-items-center rounded-xl bg-white/90 p-0.5 shadow-lg shadow-primary/15 ring-1 ring-primary/15 transition-transform duration-300 group-hover:rotate-3 group-hover:scale-105">
-            <img src="/logo.svg" alt="Easam logo" className="h-full w-full rounded-[10px] object-contain" />
+          <span className="relative grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-white/90 shadow-lg shadow-primary/15 ring-2 ring-primary/20 transition-transform duration-300 group-hover:scale-105">
+            <img src="/images/karthik-photo.jpg" alt="Karthik Easam" className="h-full w-full object-cover" />
           </span>
           <span className="hidden lg:flex flex-col leading-tight whitespace-nowrap">
             <span className="text-sm font-extrabold tracking-tight">{profile.name}</span>
