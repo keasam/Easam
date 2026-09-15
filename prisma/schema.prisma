@@ -1,15 +1,11 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma schema for the Vercel PostgreSQL database.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -32,17 +28,13 @@ model Post {
 }
 
 /// One vote per visitor per answer (visitorId = anonymous localStorage UUID).
-/// Aggregated across ALL visitors to power the live "N% helpful" badge.
+/// Aggregated across all visitors to power the live helpful badge.
 model KaiFeedback {
   id         String   @id @default(cuid())
   visitorId  String
   messageKey String
   helpful    Boolean
-  /// The visitor question that led to this answer (truncated, optional —
-  /// powers the owner-stats toast: "latest: What is his leadership style?")
   question   String?
-  /// Portfolio section the question was asked from (e.g. "projects") —
-  /// powers the per-area 👍 breakdown in owner stats.
   section    String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
