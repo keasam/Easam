@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import ZAI from "z-ai-web-dev-sdk";
 import { profile, resumeFullText } from "@/lib/resume-data";
 
 export const runtime = "nodejs";
@@ -27,17 +26,12 @@ interface ChatMessage {
   content: string;
 }
 
-/**
- * Google Gemini bridge (used when GEMINI_API_KEY is set).
- * Lets the site be self-hosted anywhere with a free key from
- * https://aistudio.google.com/apikey — no sandbox SDK required.
- */
 async function geminiReply(messages: ChatMessage[]): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY as string;
+  const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
-  // Gemini requires contents to start with "user" and not repeat roles —
-  // merge consecutive same-role turns and drop a leading assistant turn.
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
+
   const merged: { role: "user" | "model"; parts: { text: string }[] }[] = [];
   for (const m of messages) {
     const role = m.role === "assistant" ? "model" : "user";
@@ -84,7 +78,6 @@ export async function POST(req: NextRequest) {
       ? body.messages
       : [];
 
-    // Validate and sanitize incoming messages
     const sanitized = messages
       .filter(
         (m) =>
@@ -93,7 +86,7 @@ export async function POST(req: NextRequest) {
           typeof m.content === "string" &&
           m.content.trim().length > 0
       )
-      .slice(-12) // keep context window manageable
+      .slice(-12)
       .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
 
     if (
@@ -106,54 +99,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let reply = "";
-    const providerLog: string[] = [];
-
-    // 1) Preferred: owner's own free Gemini key (self-hosted deployments).
-    if (process.env.GEMINI_API_KEY) {
-      try {
-        reply = await geminiReply(sanitized);
-        providerLog.push("gemini:ok");
-      } catch (err) {
-        console.error("[/api/chat] Gemini failed, falling back:", err);
-        providerLog.push("gemini:fail");
-      }
-    }
-
-    // 2) Fallback: Z.ai backend (used in this sandbox; also a safety net).
-    if (!reply.trim()) {
-      try {
-        const zai = await ZAI.create();
-        const completion = await zai.chat.completions.create({
-          messages: [{ role: "assistant", content: SYSTEM_PROMPT }, ...sanitized],
-          thinking: { type: "disabled" },
-        });
-        reply = completion.choices[0]?.message?.content || "";
-        providerLog.push("z-ai:ok");
-      } catch (err) {
-        console.error("[/api/chat] Z.ai failed:", err);
-        providerLog.push("z-ai:fail");
-      }
-    }
-
-    console.log(`[/api/chat] providers: ${providerLog.join(" -> ") || "none"}`);
-
-    if (!reply.trim()) {
+    if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json(
-        { error: "K-AI is momentarily offline. Please try again in a few seconds." },
-        { status: 502 }
+        { error: "K-AI is not configured yet. Please add GEMINI_API_KEY in Vercel." },
+        { status: 503 }
       );
     }
 
-    return NextResponse.json({ reply: reply.trim() });
+    const reply = await geminiReply(sanitized);
+    return NextResponse.json({ reply });
   } catch (error) {
-    console.error("[/api/chat] error:", error);
+    console.error("[/api/chat] Gemini error:", error);
     return NextResponse.json(
-      {
-        error:
-          "K-AI is momentarily offline. Please try again in a few seconds.",
-      },
-      { status: 500 }
+      { error: "K-AI is momentarily offline. Please try again in a few seconds." },
+      { status: 502 }
     );
   }
 }
