@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import ZAI from "z-ai-web-dev-sdk";
 import { profile, resumeFullText } from "@/lib/resume-data";
 
 export const runtime = "nodejs";
@@ -27,8 +26,24 @@ interface ChatMessage {
   content: string;
 }
 
+function openAIChunk(content: string) {
+  return `data: ${JSON.stringify({
+    id: "gemini-stream",
+    object: "chat.completion.chunk",
+    choices: [{ index: 0, delta: { content }, finish_reason: null }],
+  })}\n\n`;
+}
+
+function doneChunk() {
+  return `data: ${JSON.stringify({
+    id: "gemini-stream",
+    object: "chat.completion.chunk",
+    choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+  })}\n\ndata: [DONE]\n\n`;
+}
+
 export async function POST(req: NextRequest) {
-  let sanitized: { role: "user" | "assistant"; content: string }[];
+  let sanitized: ChatMessage[];
 
   try {
     const body = await req.json();
@@ -60,39 +75,126 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let upstream: ReadableStream<Uint8Array> | null = null;
+  const apiKey = process.env.GEMINI_API_KEY;
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
+  if (!apiKey) {
+    return new Response(
+      `event: error\ndata: ${JSON.stringify({
+        error: "K-AI is not configured yet. Please add GEMINI_API_KEY in Vercel Environment Variables.",
+      })}\n\n`,
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+        },
+      }
+    );
+  }
+
+  const contents = sanitized.map((message) => ({
+    role: message.role === "assistant" ? "model" : "user",
+    parts: [{ text: message.content }],
+  }));
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 55000);
 
   try {
-    const zai = await ZAI.create();
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: "assistant", content: SYSTEM_PROMPT },
-        ...sanitized,
-      ],
-      stream: true,
-      thinking: { type: "disabled" },
+    const upstream = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents,
+          generationConfig: {
+            temperature: 0.35,
+            maxOutputTokens: 500,
+          },
+        }),
+        signal: controller.signal,
+      }
+    );
+
+    if (!upstream.ok || !upstream.body) {
+      const detail = await upstream.text().catch(() => "");
+      console.error("[/api/chat/stream] Gemini error:", upstream.status, detail);
+      throw new Error("Gemini request failed");
+    }
+
+    const reader = upstream.body.getReader();
+    const decoder = new TextDecoder();
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream<Uint8Array>({
+      async start(streamController) {
+        let buffer = "";
+        try {
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const events = buffer.split("\n");
+            buffer = events.pop() ?? "";
+
+            for (const line of events) {
+              const trimmed = line.trim();
+              if (!trimmed.startsWith("data:")) continue;
+              const payload = trimmed.slice(5).trim();
+              if (!payload) continue;
+
+              try {
+                const parsed = JSON.parse(payload) as {
+                  candidates?: { content?: { parts?: { text?: string }[] } }[];
+                };
+                const text = parsed.candidates?.[0]?.content?.parts
+                  ?.map((part) => part.text ?? "")
+                  .join("") ?? "";
+                if (text) streamController.enqueue(encoder.encode(openAIChunk(text)));
+              } catch {
+                // Ignore incomplete/non-JSON SSE lines.
+              }
+            }
+          }
+
+          streamController.enqueue(encoder.encode(doneChunk()));
+          streamController.close();
+        } catch (error) {
+          console.error("[/api/chat/stream] Gemini stream error:", error);
+          streamController.enqueue(
+            encoder.encode(
+              `event: error\ndata: ${JSON.stringify({
+                error: "K-AI is momentarily offline. Please try again in a few seconds.",
+              })}\n\n`
+            )
+          );
+          streamController.close();
+        } finally {
+          clearTimeout(timeout);
+        }
+      },
+      cancel() {
+        clearTimeout(timeout);
+        reader.cancel().catch(() => undefined);
+      },
     });
 
-    if (completion && typeof completion.getReader === "function") {
-      upstream = completion as ReadableStream<Uint8Array>;
-    } else {
-      // SDK returned a full JSON object instead of a stream — wrap it as one SSE event
-      const reply =
-        (completion as { choices?: { message?: { content?: string } }[] })
-          ?.choices?.[0]?.message?.content ?? "";
-      const payload = `data: ${JSON.stringify({
-        id: "wrapped",
-        object: "chat.completion.chunk",
-        choices: [{ index: 0, delta: { content: reply }, finish_reason: "stop" }],
-      })}\n\ndata: [DONE]\n\n`;
-      upstream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(new TextEncoder().encode(payload));
-          controller.close();
-        },
-      });
-    }
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
   } catch (error) {
+    clearTimeout(timeout);
     console.error("[/api/chat/stream] upstream error:", error);
     const payload = `event: error\ndata: ${JSON.stringify({
       error: "K-AI is momentarily offline. Please try again in a few seconds.",
@@ -107,15 +209,4 @@ export async function POST(req: NextRequest) {
       },
     });
   }
-
-  // Pipe the upstream OpenAI-style SSE straight through to the client
-  return new Response(upstream, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    },
-  });
 }
