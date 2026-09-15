@@ -1,0 +1,710 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-jakarta), var(--font-geist-sans), sans-serif;
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-blob-teal: var(--blob-teal);
+  --color-blob-amber: var(--blob-amber);
+  --color-blob-mint: var(--blob-mint);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 1rem;
+
+  /* Light, airy warm-mint theme — no dark colors */
+  --background: oklch(0.99 0.006 165);
+  --foreground: oklch(0.32 0.03 185);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.32 0.03 185);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.32 0.03 185);
+  --primary: oklch(0.6 0.1 184.7);
+  --primary-foreground: oklch(0.99 0.01 165);
+  --secondary: oklch(0.96 0.025 175);
+  --secondary-foreground: oklch(0.42 0.07 185);
+  --muted: oklch(0.965 0.015 175);
+  --muted-foreground: oklch(0.5 0.03 185);
+  --accent: oklch(0.955 0.045 85);
+  --accent-foreground: oklch(0.45 0.09 70);
+  --destructive: oklch(0.6 0.2 25);
+  --border: oklch(0.91 0.03 175);
+  --input: oklch(0.91 0.03 175);
+  --ring: oklch(0.7 0.09 175);
+  --chart-1: oklch(0.6 0.1 184.7);
+  --chart-2: oklch(0.77 0.15 70);
+  --chart-3: oklch(0.7 0.12 160);
+  --chart-4: oklch(0.85 0.12 90);
+  --chart-5: oklch(0.65 0.15 45);
+  --sidebar: oklch(0.985 0.01 170);
+  --sidebar-foreground: oklch(0.32 0.03 185);
+  --sidebar-primary: oklch(0.6 0.1 184.7);
+  --sidebar-primary-foreground: oklch(0.99 0.01 165);
+  --sidebar-accent: oklch(0.96 0.025 175);
+  --sidebar-accent-foreground: oklch(0.42 0.07 185);
+  --sidebar-border: oklch(0.91 0.03 175);
+  --sidebar-ring: oklch(0.7 0.09 175);
+
+  /* decorative blob colors */
+  --blob-teal: oklch(0.85 0.09 180 / 0.55);
+  --blob-amber: oklch(0.92 0.08 85 / 0.5);
+  --blob-mint: oklch(0.93 0.06 160 / 0.5);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  /* balanced heading wrapping — no orphan words on multi-line titles */
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+  /* long inline strings (emails, prompts) never blow out their chip */
+  p,
+  span,
+  a {
+    overflow-wrap: break-word;
+  }
+  /* anchored sections stop below the fixed navbar */
+  section[id],
+  main[id="main-content"] {
+    scroll-margin-top: 88px;
+  }
+  @media (min-width: 768px) {
+    section[id] {
+      scroll-margin-top: 96px;
+    }
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-jakarta), var(--font-geist-sans), ui-sans-serif,
+      system-ui, sans-serif;
+    background-image: radial-gradient(
+        oklch(0.95 0.04 175 / 0.5) 1px,
+        transparent 1px
+      ),
+      radial-gradient(oklch(0.95 0.05 85 / 0.35) 1px, transparent 1px);
+    background-size: 42px 42px, 42px 42px;
+    background-position: 0 0, 21px 21px;
+  }
+  ::selection {
+    background: oklch(0.85 0.1 175);
+    color: oklch(0.3 0.05 185);
+  }
+
+  /* keyboard focus ring — teal glow, consistent everywhere */
+  :focus-visible {
+    outline: 2px solid oklch(0.6 0.1 184.7);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  [role="button"]:focus-visible {
+    outline: 2px solid oklch(0.6 0.1 184.7);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 5px oklch(0.6 0.1 184.7 / 0.18);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+}
+
+/* ---------- custom scrollbar ---------- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: oklch(0.97 0.015 175);
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    oklch(0.75 0.09 180),
+    oklch(0.8 0.1 100)
+  );
+  border-radius: 8px;
+  border: 2px solid oklch(0.97 0.015 175);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.65 0.1 182);
+}
+.thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  border: none;
+}
+
+/* ---------- gradient text ---------- */
+.text-gradient {
+  background: linear-gradient(
+    100deg,
+    oklch(0.55 0.11 185) 10%,
+    oklch(0.65 0.12 168) 45%,
+    oklch(0.72 0.14 75) 90%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-soft {
+  background: linear-gradient(
+    100deg,
+    oklch(0.6 0.09 182),
+    oklch(0.68 0.1 165)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- glass card ---------- */
+.glass-card {
+  background: oklch(1 0 0 / 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid oklch(1 0 0 / 0.85);
+  box-shadow:
+    0 8px 30px oklch(0.55 0.07 185 / 0.08),
+    inset 0 1px 0 oklch(1 0 0 / 0.9);
+}
+
+.glass-nav {
+  background: oklch(0.99 0.008 168 / 0.8);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border-bottom: 1px solid oklch(0.9 0.04 175 / 0.6);
+}
+
+/* ---------- animated gradient blobs ---------- */
+@keyframes blob-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(40px, -50px) scale(1.08);
+  }
+  50% {
+    transform: translate(-30px, 30px) scale(0.94);
+  }
+  75% {
+    transform: translate(-45px, -25px) scale(1.05);
+  }
+}
+.animate-blob {
+  animation: blob-drift 18s ease-in-out infinite;
+}
+.animate-blob-delayed {
+  animation: blob-drift 22s ease-in-out infinite reverse;
+}
+
+/* ---------- floating ---------- */
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+.animate-float {
+  animation: float-y 5s ease-in-out infinite;
+}
+.animate-float-slow {
+  animation: float-y 8s ease-in-out infinite;
+}
+
+/* ---------- marquee ---------- */
+@keyframes marquee-x {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee-x 36s linear infinite;
+}
+.marquee-mask {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+}
+
+/* ---------- shimmer / conic ring ---------- */
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-slow {
+  animation: spin-slow 14s linear infinite;
+}
+
+@keyframes shimmer-x {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.shimmer-line {
+  background: linear-gradient(
+    90deg,
+    oklch(0.85 0.06 180) 25%,
+    oklch(0.98 0.03 90) 50%,
+    oklch(0.85 0.06 180) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-x 3.2s linear infinite;
+}
+
+/* ---------- AI pulse ring ---------- */
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 oklch(0.7 0.12 175 / 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 14px oklch(0.7 0.12 175 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 oklch(0.7 0.12 175 / 0);
+  }
+}
+.animate-pulse-ring {
+  animation: pulse-ring 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ---------- caret for typing effect ---------- */
+.typing-caret::after {
+  content: "|";
+  margin-left: 2px;
+  animation: caret-blink 0.9s steps(1) infinite;
+  color: oklch(0.7 0.13 75);
+}
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ---------- streaming caret (K-AI live answer) ---------- */
+.stream-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: -0.15em;
+  border-radius: 1px;
+  background: linear-gradient(180deg, oklch(0.6 0.1 184.7), oklch(0.78 0.14 80));
+  animation: caret-blink 0.8s steps(1) infinite;
+}
+
+/* ---------- dotted ai orb ---------- */
+@keyframes orb-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+.animate-orb {
+  animation: orb-pulse 3s ease-in-out infinite;
+}
+
+/* ---------- card hover lift ---------- */
+.lift {
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lift:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 44px oklch(0.55 0.08 185 / 0.14);
+}
+
+/* ---------- timeline ---------- */
+.timeline-line {
+  background: linear-gradient(
+    180deg,
+    oklch(0.8 0.08 178) 0%,
+    oklch(0.88 0.08 110) 60%,
+    oklch(0.92 0.08 80) 100%
+  );
+}
+
+/* ---------- chat bubble tails ---------- */
+.chat-user {
+  background: linear-gradient(120deg, oklch(0.62 0.1 182), oklch(0.66 0.1 170));
+  color: white;
+  /* inner top highlight for a soft glassy sheen */
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.22),
+    0 2px 10px oklch(0.6 0.1 180 / 0.25);
+}
+/* selecting text inside the teal user bubble gets a warm amber highlight */
+.chat-user ::selection {
+  background: oklch(0.9 0.12 90 / 0.55);
+  color: oklch(0.25 0.04 200);
+}
+
+/* assistant answer bubble while tokens are still streaming */
+.streaming-bubble {
+  box-shadow:
+    0 0 0 1px oklch(0.7 0.11 178 / 0.14),
+    0 6px 22px oklch(0.6 0.1 180 / 0.16);
+}
+
+/* ---------- K-AI nudge bubble: gradient ring + tail toward launcher ---------- */
+.nudge-ring {
+  position: relative;
+}
+.nudge-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(
+    135deg,
+    oklch(0.7 0.12 178 / 0.5),
+    oklch(0.85 0.1 120 / 0.35) 55%,
+    oklch(0.85 0.12 85 / 0.5)
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.nudge-tail {
+  position: absolute;
+  right: 18px;
+  bottom: -5px;
+  width: 11px;
+  height: 11px;
+  transform: rotate(45deg);
+  border-radius: 2px;
+  background: oklch(1 0 0);
+  border-right: 1.5px solid oklch(0.7 0.11 178 / 0.4);
+  border-bottom: 1.5px solid oklch(0.7 0.11 178 / 0.4);
+}
+
+/* ---------- glowing gradient border on hover ---------- */
+.card-glow {
+  position: relative;
+}
+.card-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    oklch(0.7 0.12 178 / 0),
+    oklch(0.75 0.13 168 / 0.55) 45%,
+    oklch(0.85 0.12 90 / 0.45)
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.card-glow:hover::before {
+  opacity: 1;
+}
+
+/* ---------- chip shine sweep (toolkit / marquee chips) ---------- */
+.chip-shine {
+  position: relative;
+  overflow: hidden;
+}
+.chip-shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -80%;
+  width: 55%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    oklch(0.9 0.07 175 / 0.55),
+    transparent
+  );
+  transform: skewX(-18deg);
+  transition: left 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.chip-shine:hover::after {
+  left: 130%;
+}
+
+/* marquee pauses when the reader hovers to inspect a skill */
+.marquee-pausing:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
+/* ---------- section divider (gradient hairline + diamond) ---------- */
+.section-divider {
+  position: relative;
+  height: 1px;
+  max-width: 72rem;
+  margin-inline: auto;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.75 0.09 180 / 0.45) 22%,
+    oklch(0.82 0.1 120 / 0.5) 50%,
+    oklch(0.85 0.1 80 / 0.45) 78%,
+    transparent
+  );
+}
+.section-divider::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 2px;
+  background: linear-gradient(135deg, oklch(0.68 0.11 178), oklch(0.82 0.12 85));
+  box-shadow: 0 0 0 4px oklch(0.97 0.03 175 / 0.9), 0 2px 8px oklch(0.6 0.1 180 / 0.3);
+}
+
+/* ---------- print-friendly resume ---------- */
+@media print {
+  body {
+    background: #fff !important;
+  }
+  .no-print,
+  header,
+  footer {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  main > *:not(.print-only) {
+    display: none !important;
+  }
+  .print-sheet {
+    color: #1c2b2b;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .print-sheet h2 {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: oklch(0.5 0.09 184);
+    border-bottom: 1.5px solid oklch(0.8 0.08 178);
+    padding-bottom: 3px;
+    margin: 18px 0 8px;
+    break-after: avoid;
+  }
+  .print-sheet a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .print-item {
+    break-inside: avoid;
+    margin-bottom: 10px;
+  }
+  @page {
+    margin: 14mm 12mm;
+  }
+}
+
+/* ---------- prompt dot glow (hero carousel active dot) ---------- */
+@keyframes dot-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 oklch(0.7 0.1 184 / 0);
+  }
+  50% {
+    box-shadow: 0 0 10px 2px oklch(0.7 0.1 184 / 0.35);
+  }
+}
+.dot-glow {
+  animation: dot-glow 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-blob,
+  .animate-blob-delayed,
+  .animate-float,
+  .animate-float-slow,
+  .animate-marquee,
+  .animate-spin-slow,
+  .shimmer-line,
+  .animate-pulse-ring,
+  .animate-orb,
+  .dot-glow {
+    animation: none;
+  }
+}
+
+/* ---------- K-AI read-aloud equalizer (speaking indicator) ---------- */
+@keyframes eq-bounce {
+  0%,
+  100% {
+    transform: scaleY(0.4);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+.eq-bar {
+  width: 2.5px;
+  height: 11px;
+  border-radius: 2px;
+  background: linear-gradient(to top, oklch(0.62 0.1 184), oklch(0.8 0.12 90));
+  transform-origin: bottom;
+  animation: eq-bounce 0.85s ease-in-out infinite;
+}
+
+/* ---------- deep-link CTA underline slide (AI-section "see why") ---------- */
+.cta-slide {
+  background-image: linear-gradient(
+    oklch(0.6 0.1 184.7),
+    oklch(0.6 0.1 184.7)
+  );
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 2px;
+  transition: background-size 0.28s ease;
+}
+.cta-slide:hover,
+.cta-slide:focus-visible {
+  background-size: 100% 2px;
+}
+
+/* ---------- keyboard focus ring for chat message actions ---------- */
+.msg-action:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 4px oklch(0.6 0.1 184.7 / 0.45);
+}
+
+/* ---------- prefers-contrast: more — systematic AA bump ---------- */
+/* Keeps the light teal/amber palette, just darkens low-contrast text and
+   strengthens translucent borders for visitors who ask for more contrast. */
+@media (prefers-contrast: more) {
+  .text-muted-foreground,
+  .text-muted-foreground\/70,
+  .text-muted-foreground\/80 {
+    color: oklch(0.38 0.03 185) !important;
+  }
+  .text-foreground\/60,
+  .text-foreground\/70,
+  .text-foreground\/75,
+  .text-foreground\/85 {
+    color: oklch(0.3 0.03 185) !important;
+  }
+  .text-amber-800,
+  .text-amber-700 {
+    color: oklch(0.4 0.1 70) !important;
+  }
+  .text-primary {
+    color: oklch(0.48 0.1 184) !important;
+  }
+  .border-primary\/10,
+  .border-primary\/15 {
+    border-color: oklch(0.6 0.1 184.7 / 0.6) !important;
+  }
+  .border-amber-300\/50 {
+    border-color: oklch(0.75 0.12 80 / 0.9) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eq-bar {
+    animation: none;
+    transform: scaleY(0.7);
+  }
+  .cta-slide {
+    transition: none;
+  }
+}
