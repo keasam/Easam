@@ -58,7 +58,13 @@ async function geminiReply(messages: ChatMessage[]): Promise<string> {
   );
 
   if (!res.ok) {
-    throw new Error(`Gemini ${res.status} — check GEMINI_API_KEY / model name`);
+    const errorBody = (await res.text()).slice(0, 2000);
+    console.error("Gemini API diagnostic:", {
+      status: res.status,
+      model,
+      body: errorBody,
+    });
+    throw new Error(`Gemini ${res.status}`);
   }
 
   const data = (await res.json()) as {
