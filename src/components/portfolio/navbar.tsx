@@ -2,7 +2,7 @@
 
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { motion, useScroll, useSpring, AnimatePresence } from "framer-motion";
-import { Bot, Keyboard, Menu, X, Sparkles, Command as CommandIcon } from "lucide-react";
+import { Bot, Keyboard, Menu, X, Command as CommandIcon } from "lucide-react";
 import { profile } from "@/lib/resume-data";
 import { usePlatformKeys } from "@/hooks/use-platform-keys";
 const links = [
@@ -39,7 +39,6 @@ export function Navbar({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // scrollspy — highlight the section currently in view
   useEffect(() => {
     const sections = links
       .map((l) => document.getElementById(l.href.slice(1)))
@@ -66,7 +65,6 @@ export function Navbar({
         scrolled ? "glass-nav shadow-[0_6px_24px_oklch(0.55_0.07_185/0.08)]" : "bg-transparent"
       }`}
     >
-      {/* scroll progress */}
       <motion.div
         style={{ scaleX: progress }}
         className="absolute top-0 left-0 right-0 h-[3px] origin-left bg-gradient-to-r from-primary via-emerald-400 to-amber-400"
@@ -77,13 +75,9 @@ export function Navbar({
         transition={{ duration: 0.55, ease: "easeOut" }}
         className="mx-auto flex h-16 md:h-[72px] max-w-7xl items-center justify-between gap-2 px-4 sm:px-6 lg:px-8"
       >
-        {/* logo */}
         <a href="#top" className="group flex shrink-0 items-center gap-3" aria-label="Back to top">
-          <span className="relative grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-primary to-emerald-500 font-extrabold text-primary-foreground shadow-lg shadow-primary/25 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105">
-            {profile.initials}
-            <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-amber-400 ring-2 ring-white">
-              <Sparkles className="h-2.5 w-2.5 text-white" />
-            </span>
+          <span className="relative grid h-10 w-10 place-items-center rounded-xl bg-white/90 p-0.5 shadow-lg shadow-primary/15 ring-1 ring-primary/15 transition-transform duration-300 group-hover:rotate-3 group-hover:scale-105">
+            <img src="/logo.svg" alt="Easam logo" className="h-full w-full rounded-[10px] object-contain" />
           </span>
           <span className="hidden lg:flex flex-col leading-tight whitespace-nowrap">
             <span className="text-sm font-extrabold tracking-tight">{profile.name}</span>
@@ -93,7 +87,6 @@ export function Navbar({
           </span>
         </a>
 
-        {/* desktop links */}
         <div className="hidden md:flex items-center gap-0.5 lg:gap-1 rounded-full border border-primary/10 bg-white/70 px-2 py-1.5 shadow-sm">
           {links.map((l) => {
             const isActive = active === l.href;
@@ -115,7 +108,6 @@ export function Navbar({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {/* command palette trigger */}
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("palette:open"))}
             aria-label="Open quick actions (Command K)"
@@ -132,7 +124,6 @@ export function Navbar({
             <Bot className="h-4 w-4" />
             Ask K-AI
           </button>
-          {/* mobile toggle */}
           <button
             onClick={() => setOpen((v) => !v)}
             aria-label="Toggle menu"
@@ -144,7 +135,6 @@ export function Navbar({
         </div>
       </motion.nav>
 
-      {/* mobile menu */}
       <AnimatePresence>
         {open && (
           <motion.div
