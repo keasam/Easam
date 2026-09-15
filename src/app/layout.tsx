@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: profile.name }],
   icons: {
-    icon: "/images/karthik-photo.jpg",
+    icon: "/logo.svg",
   },
   openGraph: {
     title: `${profile.name} — ${profile.title}`,
