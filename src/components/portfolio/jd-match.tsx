@@ -45,9 +45,13 @@ export function JdMatch() {
   };
 
   return (
-    <section id="jd-match" className="relative overflow-hidden py-14 md:py-20">
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-secondary/25 via-transparent to-amber-50/20" />
+    <section id="jd-match" className="relative overflow-hidden py-14 md:py-20 scroll-mt-24">
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-amber-50/70 via-transparent to-secondary/25" />
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto mb-8 max-w-3xl rounded-3xl border border-amber-200/70 bg-white/80 p-4 text-center shadow-sm backdrop-blur md:p-5">
+          <p className="text-xs font-black uppercase tracking-[.2em] text-amber-700">For recruiters & hiring managers</p>
+          <p className="mt-1 text-sm font-semibold text-foreground/80">Have a role in mind? Upload the JD and instantly see how it aligns with Karthik&apos;s resume.</p>
+        </div>
         <SectionHeading eyebrow="AI Career Match" title="Drop a JD." highlight="See the fit." description="Upload a job description and AI will compare it with Karthik's resume, showing the evidence, strongest matches, and gaps." />
 
         <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
@@ -55,8 +59,8 @@ export function JdMatch() {
             <div onClick={() => inputRef.current?.click()} className="cursor-pointer rounded-3xl border-2 border-dashed border-primary/20 bg-secondary/25 p-8 text-center transition-colors hover:border-primary/40 hover:bg-secondary/45">
               <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-emerald-500 text-white shadow-lg shadow-primary/25"><UploadCloud className="h-6 w-6" /></span>
               <h3 className="mt-4 text-lg font-extrabold">Upload Job Description</h3>
-              <p className="mt-1 text-sm text-muted-foreground">PDF, DOC, DOCX or TXT · up to 8 MB</p>
-              <input ref={inputRef} type="file" accept=".pdf,.doc,.docx,.txt,application/pdf,text/plain" className="hidden" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setResult(null); }} />
+              <p className="mt-1 text-sm text-muted-foreground">PDF or TXT · up to 8 MB</p>
+              <input ref={inputRef} type="file" accept=".pdf,.txt,application/pdf,text/plain" className="hidden" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setResult(null); }} />
             </div>
 
             {file && <div className="mt-4 flex items-center gap-3 rounded-2xl border border-primary/10 bg-white p-3"><FileText className="h-5 w-5 text-primary" /><span className="min-w-0 flex-1 truncate text-sm font-bold">{file.name}</span><button type="button" onClick={() => setFile(null)} aria-label="Remove file"><XCircle className="h-5 w-5 text-muted-foreground" /></button></div>}
