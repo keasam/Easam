@@ -169,10 +169,10 @@ export function CommandPalette() {
       onOpenChange={setOpen}
       title="Quick actions"
       description="Jump to a section, ask K-AI, or grab Karthik's details"
-      className="rounded-2xl border-primary/15 bg-white/95 shadow-2xl shadow-primary/20 backdrop-blur-xl [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-extrabold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.14em] [&_[cmdk-group-heading]]:text-primary/70 [&_[cmdk-input-wrapper]_svg]:text-primary [&_[cmdk-item]]:rounded-xl [&_[cmdk-item]]:py-2.5 data-[state=open]:animate-in"
+      className="h-[calc(100vh-32px)] max-h-[calc(100vh-32px)] overflow-hidden rounded-2xl border-primary/15 bg-white/95 shadow-2xl shadow-primary/20 backdrop-blur-xl sm:h-[min(720px,calc(100vh-48px))] sm:max-h-[calc(100vh-48px)] [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-extrabold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.14em] [&_[cmdk-group-heading]]:text-primary/70 [&_[cmdk-input-wrapper]_svg]:text-primary [&_[cmdk-item]]:rounded-xl [&_[cmdk-item]]:py-2.5 data-[state=open]:animate-in"
     >
       <CommandInput placeholder="Type a command or search…" />
-      <CommandList className="thin-scrollbar max-h-[380px]">
+      <CommandList className="thin-scrollbar min-h-0 max-h-none flex-1">
         <CommandEmpty>No results found.</CommandEmpty>
 
         <CommandGroup heading="Ask K-AI">
@@ -384,7 +384,7 @@ export function CommandPalette() {
         </CommandGroup>
       </CommandList>
 
-      <div className="flex items-center justify-between border-t border-primary/10 bg-secondary/40 px-4 py-2.5 text-[11px] font-semibold text-muted-foreground">
+      <div className="flex shrink-0 items-center justify-between border-t border-primary/10 bg-secondary/40 px-4 py-2.5 text-[11px] font-semibold text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <Bot className="h-3.5 w-3.5 text-primary" />
           Powered by K-AI
