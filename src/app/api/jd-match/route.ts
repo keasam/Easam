@@ -7,7 +7,7 @@ export const maxDuration = 60;
 const PRIMARY_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const FALLBACK_MODEL = "gemini-3.5-flash";
 const MAX_BYTES = 8 * 1024 * 1024;
-const REQUEST_TIMEOUT_MS = 35_000;
+const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_RETRIES = 3;
 
 const SYSTEM_PROMPT = `You are a recruitment resume-to-job-description matching assistant for Karthik Easam. Compare the supplied job description ONLY against the authoritative resume below. Do not invent experience, skills, employers, certifications, metrics, education, or achievements. Treat synonymous wording as a possible match only when the underlying capability is clearly supported. Return JSON only.
@@ -52,25 +52,21 @@ function normalizeResult(value: unknown) {
 function fallbackAnalyze(jdText: string) {
   const resume = resumeFullText.toLowerCase();
   const jd = jdText.toLowerCase();
-  const terms = Array.from(new Set(jd.match(/[a-z][a-z0-9+#.-]{2,}/g) || []))
-    .filter((t) => !new Set(["the", "and", "for", "with", "that", "this", "from", "you", "your", "are", "will", "our", "job", "role", "years", "work", "team", "have", "has", "who", "their", "they", "into", "about", "can", "all", "not", "but", "its", "our"]).has(t));
+  const stopWords = new Set(["the", "and", "for", "with", "that", "this", "from", "you", "your", "are", "will", "our", "job", "role", "years", "work", "team", "have", "has", "who", "their", "they", "into", "about", "can", "all", "not", "but", "its"]);
+  const terms = Array.from(new Set(jd.match(/[a-z][a-z0-9+#.-]{2,}/g) || [])).filter((t) => !stopWords.has(t));
   const matched = terms.filter((t) => resume.includes(t));
   const ratio = terms.length ? matched.length / terms.length : 0;
-  const overall = Math.round(Math.max(20, Math.min(95, ratio * 100)));
+  const overall = terms.length ? Math.round(Math.max(20, Math.min(95, ratio * 100))) : 0;
   const highlights = matched.slice(0, 8).map((t) => `Resume evidence includes “${t}”.`);
   const gaps = terms.filter((t) => !resume.includes(t)).slice(0, 8).map((t) => `The resume does not explicitly mention “${t}”.`);
-  const scores = {
-    skills: overall,
-    experience: overall,
-    responsibilities: overall,
-    technology: overall,
-    industry: overall,
-    qualifications: overall,
-  };
+  const scores = { skills: overall, experience: overall, responsibilities: overall, technology: overall, industry: overall, qualifications: overall };
   return {
     overall,
     scores,
-    whyKarthik: ["AI analysis service was temporarily unavailable, so this result uses a conservative local text-evidence comparison against the stored resume."],
+    whyKarthik: [
+      "Gemini was temporarily unavailable, so this result uses a conservative local text-evidence comparison against the stored resume.",
+      ...(jdText ? [] : ["For a PDF upload, retry when the AI service is available because the local fallback cannot extract text from the uploaded PDF."]),
+    ],
     strongMatches: highlights,
     partialMatches: [],
     gaps,
@@ -81,53 +77,51 @@ async function callGemini(model: string, parts: Array<Record<string, unknown>>) 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    let lastError = "";
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": apiKey,
+  let lastError = "";
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: [{ role: "user", parts }],
+          generationConfig: {
+            temperature: 0.1,
+            responseMimeType: "application/json",
+            maxOutputTokens: 3000,
           },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-            contents: [{ role: "user", parts }],
-            generationConfig: {
-              temperature: 0.1,
-              responseMimeType: "application/json",
-              maxOutputTokens: 3000,
-            },
-          }),
-          signal: controller.signal,
-        });
+        }),
+        signal: controller.signal,
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          const text = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
-          if (!text) throw new Error("Gemini returned an empty response");
-          return normalizeResult(JSON.parse(cleanJson(text)));
-        }
-
-        const detail = await response.text();
-        lastError = `HTTP ${response.status}: ${detail.slice(0, 500)}`;
-        if (![408, 429, 500, 502, 503, 504].includes(response.status)) break;
-      } catch (error) {
-        lastError = error instanceof Error ? error.message : String(error);
+      if (response.ok) {
+        const data = await response.json();
+        const text = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
+        if (!text) throw new Error("Gemini returned an empty response");
+        return normalizeResult(JSON.parse(cleanJson(text)));
       }
 
-      if (attempt < MAX_RETRIES - 1) {
-        const delay = 800 * Math.pow(2, attempt) + Math.floor(Math.random() * 400);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
+      const detail = await response.text();
+      lastError = `HTTP ${response.status}: ${detail.slice(0, 500)}`;
+      if (![408, 429, 500, 502, 503, 504].includes(response.status)) break;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    } finally {
+      clearTimeout(timeout);
     }
-    throw new Error(lastError || "Gemini request failed");
-  } finally {
-    clearTimeout(timeout);
+
+    if (attempt < MAX_RETRIES - 1) {
+      const delay = 700 * Math.pow(2, attempt) + Math.floor(Math.random() * 500);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
+  throw new Error(lastError || "Gemini request failed");
 }
 
 export async function POST(req: Request) {
@@ -175,9 +169,6 @@ export async function POST(req: Request) {
           console.error("JD match fallback Gemini attempt failed:", fallbackError);
         }
       }
-
-      // Never make the feature unusable just because Gemini is temporarily unavailable.
-      // Return a conservative local comparison with the same response shape expected by the UI.
       return NextResponse.json(fallbackAnalyze(jdText), { headers: { "X-JD-Match-Fallback": "local" } });
     }
   } catch (error) {
