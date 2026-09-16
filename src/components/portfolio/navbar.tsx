@@ -2,7 +2,7 @@
 
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { motion, useScroll, useSpring, AnimatePresence } from "framer-motion";
-import { Bot, Keyboard, Menu, X, Command as CommandIcon } from "lucide-react";
+import { Bot, Keyboard, Menu, X, Command as CommandIcon, Sparkles } from "lucide-react";
 import { profile } from "@/lib/resume-data";
 import { usePlatformKeys } from "@/hooks/use-platform-keys";
 const links = [
@@ -11,6 +11,7 @@ const links = [
   { label: "Journey", href: "#experience" },
   { label: "Projects", href: "#projects" },
   { label: "Products", href: "#products" },
+  { label: "AI Match", href: "#jd-match", featured: true },
   { label: "Contact", href: "#contact" },
 ];
 
@@ -98,9 +99,12 @@ export function Navbar({
                 className={`relative whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors xl:px-4 xl:text-sm ${
                   isActive
                     ? "bg-gradient-to-r from-primary to-emerald-500 text-primary-foreground shadow-md shadow-primary/25"
-                    : "text-muted-foreground hover:bg-secondary hover:text-primary"
+                    : l.featured
+                      ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100 hover:text-amber-800"
+                      : "text-muted-foreground hover:bg-secondary hover:text-primary"
                 }`}
               >
+                {l.featured && <Sparkles className="mr-1 inline-block h-3.5 w-3.5" />}
                 {l.label}
               </a>
             );
@@ -155,9 +159,12 @@ export function Navbar({
                     className={`block rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
                       isActive
                         ? "bg-secondary text-primary"
-                        : "text-muted-foreground hover:bg-secondary hover:text-primary"
+                        : l.featured
+                          ? "bg-amber-50 text-amber-700"
+                          : "text-muted-foreground hover:bg-secondary hover:text-primary"
                     }`}
                   >
+                    {l.featured && <Sparkles className="mr-2 inline-block h-4 w-4" />}
                     {l.label}
                   </a>
                 );
